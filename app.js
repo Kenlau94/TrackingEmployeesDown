@@ -1,10 +1,7 @@
 const inquirer = require("inquirer");
 const index = require("./src/index");
 
-const startEmployeeTracker = () => {
-  promptInquirer();
-};
-const promptInquirer = async () => {
+const startEmployeeTracker = async () => {
   try {
     const data = await inquirer.prompt({
       name: "main",
