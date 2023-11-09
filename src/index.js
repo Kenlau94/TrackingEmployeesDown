@@ -1,6 +1,7 @@
 const inquirer = require("inquirer");
 const mysql = require("mysql2");
 
+// cpnectipon works
 const pool = mysql
   .createPool({
     host: "127.0.0.1",
@@ -10,11 +11,13 @@ const pool = mysql
   })
   .promise();
 
+// views departments
 const viewDeparts = async () => {
   const [rows] = await pool.query("SELECT * FROM department;");
   console.table(rows);
 };
 
+// views roles
 const viewRoles = async () => {
   let query = `
     SELECT  r.id,
@@ -30,6 +33,7 @@ const viewRoles = async () => {
   console.table(rows);
 };
 
+//views empkoyees
 const viewEmpl = async () => {
   let query = `
     SELECT  e.id,
@@ -49,6 +53,7 @@ const viewEmpl = async () => {
   console.table(rows);
 };
 
+//+dep
 const addDept = async () => {
   try {
     const dept = await inquirer.prompt({
@@ -58,7 +63,7 @@ const addDept = async () => {
       validate: (name) => {
         return name
           ? true
-          : console.log("Please enter a name for the new department:", false);
+          : console.log("Enter a name for the new department:", false);
       },
     });
     const { deptAdded } = dept;
@@ -75,6 +80,7 @@ const addDept = async () => {
   }
 };
 
+//+role
 const addRole = async () => {
   try {
     const [departments] = await pool.query(`SELECT * FROM department;`);
@@ -90,7 +96,7 @@ const addRole = async () => {
         validate: (title) => {
           return title
             ? true
-            : console.log("Please enter a title for the new role:", false);
+            : console.log("Enter a title for the new role:", false);
         },
       },
       {
@@ -100,7 +106,7 @@ const addRole = async () => {
         validate: (salary) => {
           return salary
             ? true
-            : console.log("Please enter a salary for the new role:", false);
+            : console.log("Enter a salary for the new role:", false);
         },
       },
       {
@@ -126,6 +132,7 @@ const addRole = async () => {
   }
 };
 
+//+employee
 const addEmpl = async () => {
   try {
     const [roles] = await pool.query(`SELECT * FROM role;`);
@@ -146,7 +153,7 @@ const addEmpl = async () => {
         validate: (first) => {
           return first
             ? true
-            : console.log("Please enter a first name for the employee", false);
+            : console.log("Enter a first name for the employee", false);
         },
       },
       {
@@ -156,7 +163,7 @@ const addEmpl = async () => {
         validate: (last) => {
           return last
             ? true
-            : console.log("Please enter a last name for the employee", false);
+            : console.log("Enter a last name for the employee", false);
         },
       },
       {
@@ -194,6 +201,7 @@ const addEmpl = async () => {
   }
 };
 
+//update
 const updateRole = async () => {
   try {
     const [employeeNames] = await pool.query(`SELECT * FROM employee;`);
