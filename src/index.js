@@ -1,23 +1,24 @@
+// sets the required packages
 const inquirer = require("inquirer");
 const mysql = require("mysql2");
 
-// cpnectipon works
+// creates a connection using 👇
 const pool = mysql
   .createPool({
     host: "127.0.0.1",
     user: "root",
     password: "Ringo-004",
-    database: "tracker_db",
+    database: "empl_tracker_db",
   })
   .promise();
 
-// views departments
+// creates functions for view
 const viewDeparts = async () => {
   const [rows] = await pool.query("SELECT * FROM department;");
   console.table(rows);
 };
 
-// views roles
+//views roles
 const viewRoles = async () => {
   let query = `
     SELECT  r.id,
@@ -33,7 +34,7 @@ const viewRoles = async () => {
   console.table(rows);
 };
 
-//views empkoyees
+//views employees
 const viewEmpl = async () => {
   let query = `
     SELECT  e.id,
@@ -53,7 +54,7 @@ const viewEmpl = async () => {
   console.table(rows);
 };
 
-//+dep
+//adds department
 const addDept = async () => {
   try {
     const dept = await inquirer.prompt({
@@ -80,7 +81,7 @@ const addDept = async () => {
   }
 };
 
-//+role
+//addds role
 const addRole = async () => {
   try {
     const [departments] = await pool.query(`SELECT * FROM department;`);
@@ -132,7 +133,7 @@ const addRole = async () => {
   }
 };
 
-//+employee
+//adds rmployee
 const addEmpl = async () => {
   try {
     const [roles] = await pool.query(`SELECT * FROM role;`);
@@ -153,7 +154,7 @@ const addEmpl = async () => {
         validate: (first) => {
           return first
             ? true
-            : console.log("Enter a first name for the employee", false);
+            : console.log("Enter first name for the employee", false);
         },
       },
       {
@@ -163,19 +164,19 @@ const addEmpl = async () => {
         validate: (last) => {
           return last
             ? true
-            : console.log("Enter a last name for the employee", false);
+            : console.log("Enter last name for the employee", false);
         },
       },
       {
         name: "employeeRole",
         type: "list",
-        message: "What is the employee's role?",
+        message: "What's the employee's role?",
         choices: [...roleTitle],
       },
       {
         name: "employeeManager",
         type: "list",
-        message: "Who is the employee's manager?",
+        message: "Who's the employee's manager?",
         choices: [...managerName],
       },
     ]);
@@ -201,7 +202,148 @@ const addEmpl = async () => {
   }
 };
 
-//update
+//removes department
+const removeDept = async () => {
+  try {
+    const [departments] = await pool.query(`SELECT * FROM department;`);
+    const deptName = departments
+      .map((dept) => dept.name)
+      .filter((arr) => arr != null);
+
+    const dept = await inquirer.prompt({
+      name: "deptRemoved",
+      type: "list",
+      message: "Please select a department to remove:",
+      choices: [...deptName],
+    });
+    const { deptRemoved } = dept;
+
+    await pool.query(`UPDATE department SET name = NULL WHERE name = ?;`, [
+      deptRemoved,
+    ]);
+
+    await pool.query(
+      `
+    DELETE FROM department WHERE name = ?;
+    `,
+      [deptRemoved]
+    );
+
+    return await viewDeparts();
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+// removs role
+const removeRole = async () => {
+  try {
+    const [roles] = await pool.query(`SELECT * FROM role;`);
+    const roleTitle = roles
+      .map((role) => role.title)
+      .filter((arr) => arr != null);
+
+    const role = await inquirer.prompt({
+      name: "roleRemoved",
+      type: "list",
+      message: "Select a role to remove:",
+      choices: [...roleTitle],
+    });
+    const { roleRemoved } = role;
+
+    await pool.query(
+      `
+      UPDATE role 
+      SET title = NULL, salary = NULL
+      WHERE title = ? 
+      `,
+      [roleRemoved]
+    );
+
+    await pool.query(
+      `
+    DELETE FROM role WHERE title = ?;
+    `,
+      [roleRemoved]
+    );
+
+    return await viewRoles();
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+//removes empl
+const removeEmpl = async () => {
+  try {
+    const [employees] = await pool.query(`SELECT * FROM employee;`);
+    const employeeName = employees.map(
+      (employee) => `${employee.first_name} ${employee.last_name}`
+    );
+
+    const employee = await inquirer.prompt({
+      name: "employeeRemoved",
+      type: "list",
+      message: "Please select an employee to remove:",
+      choices: [...employeeName],
+    });
+    const { employeeRemoved } = employee;
+
+    const checkEmployee = employees.find(
+      (e) => `${e.first_name} ${e.last_name}` === employeeRemoved
+    );
+
+    if (checkEmployee.manager_id === null) {
+      const changeManager = employees.filter(
+        (e) => e.manager_id == checkEmployee.id
+      );
+      const updateManager = changeManager.map(
+        (name) => `${name.first_name} ${name.last_name}`
+      );
+      updateManager.forEach(async (name) => {
+        await pool.query(
+          `
+            UPDATE employee
+            SET manager_id = NULL
+            WHERE CONCAT(first_name, ' ', last_name) = ?;
+          `,
+          [name]
+        );
+      });
+    } else {
+      const changeManager = employees.filter(
+        (e) => e.manager_id == checkEmployee.id
+      );
+      const updateManager = changeManager.map(
+        (name) => `${name.first_name} ${name.last_name}`
+      );
+      updateManager.forEach(async (name) => {
+        await pool.query(
+          `
+            UPDATE employee
+            SET manager_id = NULL
+            WHERE CONCAT(first_name, ' ', last_name) = ?;
+          `,
+          [name]
+        );
+      });
+    }
+
+    await pool.query(
+      `
+        DELETE FROM employee 
+        WHERE CONCAT(first_name, ' ', last_name) = ?;
+      `,
+      [employeeRemoved]
+    );
+
+    return await viewEmpl();
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+//updates role
 const updateRole = async () => {
   try {
     const [employeeNames] = await pool.query(`SELECT * FROM employee;`);
@@ -253,6 +395,124 @@ const updateRole = async () => {
   }
 };
 
+//update amanger
+const updateManager = async () => {
+  try {
+    const [employees] = await pool.query(`SELECT * FROM employee;`);
+    const employeeNames = employees.map(
+      (e) => `${e.first_name} ${e.last_name}`
+    );
+
+    const data = await inquirer.prompt([
+      {
+        name: "selectedEmployee",
+        type: "list",
+        message:
+          "Select the employee who will be reassigned a different manager:",
+        choices: [...employeeNames],
+      },
+      {
+        name: "managerSelected",
+        type: "list",
+        message: "Reassign this employee's manager to:",
+        choices: [...employeeNames, "NULL"],
+      },
+    ]);
+    const { selectedEmployee, managerSelected } = data;
+
+    if (managerSelected === "NULL") {
+      await pool.query(
+        `
+      UPDATE employee AS e
+      SET e.manager_id = NULL
+      WHERE CONCAT(e.first_name, ' ', e.last_name) = ?
+      `,
+        [selectedEmployee]
+      );
+    } else {
+      const { id } = employees.find(
+        (e) => `${e.first_name} ${e.last_name}` === managerSelected
+      );
+
+      await pool.query(
+        `
+        UPDATE employee AS e
+        SET e.manager_id = ?
+        WHERE CONCAT(e.first_name, ' ', e.last_name) = ?
+        `,
+        [id, selectedEmployee]
+      );
+    }
+
+    return await viewEmpl();
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+//view by manger
+const viewByManager = async () => {
+  try {
+    const [result] = await pool.query(`
+      SELECT
+        CONCAT(m.first_name, ' ', m.last_name) AS manager_name,
+        GROUP_CONCAT(CONCAT(e.first_name, ' ', e.last_name)) AS employee_names
+      FROM
+        employee e
+      JOIN
+        employee m ON e.manager_id = m.id
+      GROUP BY
+        m.id
+      ORDER BY
+        m.id;
+    `);
+    console.table(result);
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+//view by department
+const viewByDept = async () => {
+  try {
+    const [result] = await pool.query(`
+      SELECT
+        d.name AS department,
+        GROUP_CONCAT(CONCAT(e.first_name, ' ', e.last_name)) AS employee_name
+      FROM
+        department d
+      JOIN
+        role r ON d.id = r.department_id
+      JOIN
+        employee e ON r.id = e.role_id
+      WHERE
+        d.name IS NOT NULL
+      GROUP BY
+        d.id
+      ORDER BY
+        d.id;
+    `);
+
+    console.table(result);
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+//view total budget
+const viewBudget = async () => {
+  const query = `
+    SELECT d.name AS department_name, COALESCE(SUM(r.salary), 0) AS total_salary
+    FROM department d
+    JOIN role r ON d.id = r.department_id
+    JOIN employee e ON r.id = e.role_id
+    WHERE d.name IS NOT NULL
+    GROUP BY d.name;
+  `;
+  const [result] = await pool.query(query);
+  console.table(result);
+};
+
 module.exports = {
   viewDeparts,
   viewRoles,
@@ -260,5 +520,12 @@ module.exports = {
   addDept,
   addRole,
   addEmpl,
+  updateManager,
+  removeDept,
+  removeRole,
+  removeEmpl,
   updateRole,
+  viewByManager,
+  viewByDept,
+  viewBudget,
 };
